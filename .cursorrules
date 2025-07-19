@@ -1,0 +1,11 @@
+use sempre o yarn como gerenciador de pacotes.
+use sempre o expo como framework para desenvolvimento de aplicativos.
+use sempre o typescript como linguagem de programação.
+use sempre o react native como framework para desenvolvimento de aplicativos.
+use sempre o expo router como gerenciador de rotas.
+use sempre o expo secure store como gerenciador de armazenamento seguro.
+use sempre o expo splash screen como gerenciador de tela de splash.
+use sempre o expo status bar como gerenciador de barra de status.
+use sempre as configuracoes do app para cores e fontes.
+sempre corrija erros de lint e de tipo
+quando for corrigir erros de eslint em useffect sempre considere que ao adicionar dependencias nao cause loop desnecessarios
