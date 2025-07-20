@@ -10,6 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   TouchableOpacity,
@@ -246,9 +247,7 @@ export default function TransactionInstallmentsScreen() {
       <View flex={1} backgroundColor="#F8F9FA">
         <InstallmentTransactionHeader title="Parcelas" showBackButton />
         <YStack flex={1} justifyContent="center" alignItems="center">
-          <Text fontSize={16} color={colors.icon}>
-            Carregando...
-          </Text>
+          <ActivityIndicator size="large" color={colors.tint} />
         </YStack>
       </View>
     );

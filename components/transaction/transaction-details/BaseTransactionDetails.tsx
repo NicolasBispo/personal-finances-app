@@ -1,42 +1,33 @@
 import { Colors } from "@/constants/Colors";
-import { Transaction } from "@/types/transaction";
 import { formatCurrencyFromCents } from "@/utils/finances";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState } from "react";
 import { Alert, ScrollView } from "react-native";
 import { Button, ButtonText, Text, View, XStack, YStack } from "tamagui";
+import { useTransactionDetails } from "./TransactionDetailsProvider";
+import { useTransactionBottomSheet } from "@/providers/TransactionBottomSheetProvider";
+import { useExpenses } from "@/providers/ExpensesProvider";
 
 interface BaseTransactionDetailsProps {
-  transaction: Transaction;
-  onUpdate: (data: any) => void;
-  onDelete: () => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  isUpdating?: boolean;
-  isDeleting?: boolean;
   children?: React.ReactNode;
 }
 
 export const BaseTransactionDetails = ({
-  transaction,
-  onUpdate,
-  onDelete,
-  onCancel,
-  isLoading = false,
-  isUpdating = false,
-  isDeleting = false,
   children,
 }: BaseTransactionDetailsProps) => {
-  const [isEditing, setIsEditing] = useState(false);
+  const { transaction, deleteTransactionMutation, bottomSheetControls, deleteInstallmentMutation } = useTransactionDetails();
+  const { closeTransactionSheet } = useTransactionBottomSheet();
+  const { removeTransactionById } = useExpenses();
   const colors = Colors.light;
   const bottomTabHeight = useBottomTabBarHeight();
 
   const formatDate = (date: Date) => {
     return format(new Date(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
+
+  const mainInstallmentId = transaction.parentTransactionId || transaction.id;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -67,37 +58,22 @@ export const BaseTransactionDetails = ({
     }
   };
 
+  const handleDeletePress = () => {2 
+    deleteInstallmentMutation.mutate(mainInstallmentId);
+    removeTransactionById(transaction.id);
+    removeTransactionById(mainInstallmentId);
+    closeTransactionSheet();
+  };
+
   const handleDelete = () => {
     Alert.alert(
       "Confirmar Exclusão",
-      "Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.",
+      "Tem certeza que deseja excluir este parcelamento? Ao deletar um parcelamento voce apaga todas parcelas associadas a ele. Esta ação não pode ser desfeita.",
       [
         { text: "Cancelar", style: "cancel" },
-        { text: "Excluir", style: "destructive", onPress: onDelete },
+        { text: "Excluir", style: "destructive", onPress: handleDeletePress },
       ]
     );
-  };
-
-  const handleEdit = () => {
-    setIsEditing(true);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-  };
-
-  const handleStatusChange = (newStatus: string) => {
-    const updateData = {
-      ...transaction,
-      status: newStatus,
-    };
-
-    // Se está marcando como pago/recebido, adiciona a data real
-    if (newStatus === "PAID" || newStatus === "RECEIVED") {
-      updateData.dateOccurred = new Date();
-    }
-
-    onUpdate(updateData);
   };
 
   return (
@@ -106,13 +82,13 @@ export const BaseTransactionDetails = ({
       <View padding={16} paddingBottom={8}>
         <XStack justifyContent="space-between" alignItems="center">
           <Text fontSize={20} fontWeight="bold" color={colors.text}>
-            {isEditing ? "Editar Transação" : "Detalhes da Transação"}
+            Detalhes da Transação
           </Text>
           <Button
             size="$3"
             circular
             backgroundColor="transparent"
-            onPress={onCancel}
+            onPress={bottomSheetControls.close}
           >
             <MaterialIcons name="close" size={24} color={colors.icon} />
           </Button>
@@ -199,55 +175,19 @@ export const BaseTransactionDetails = ({
             {children}
 
             {/* Ações */}
-            <YStack space={12} marginTop={16}>
-              {/* Alterar Status */}
-              <YStack space={8}>
-                <Text fontSize={16} fontWeight="600" color={colors.text}>
-                  Alterar Status
-                </Text>
-                <XStack space={8} flexWrap="wrap">
-                  {["PENDING", "PAID", "RECEIVED", "CANCELLED"].map((status) => (
-                    <Button
-                      key={status}
-                      size="$3"
-                      backgroundColor={transaction.status === status ? getStatusColor(status) : "transparent"}
-                      borderWidth={1}
-                      borderColor={getStatusColor(status)}
-                      onPress={() => handleStatusChange(status)}
-                      disabled={isLoading}
-                    >
-                      <ButtonText
-                        color={transaction.status === status ? "white" : getStatusColor(status)}
-                        fontSize={12}
-                      >
-                        {getStatusText(status)}
-                      </ButtonText>
-                    </Button>
-                  ))}
-                </XStack>
-              </YStack>
+            <YStack gap={12} marginTop={16}>
 
               {/* Botões de Ação */}
-              <XStack space={12}>
-                <Button
-                  flex={1}
-                  backgroundColor={colors.tint}
-                  onPress={handleEdit}
-                  disabled={isLoading}
-                >
-                  <ButtonText color="white" fontWeight="600">
-                    Editar
-                  </ButtonText>
-                </Button>
+              <XStack gap={12}>
                 
                 <Button
                   flex={1}
                   backgroundColor="#E74C3C"
                   onPress={handleDelete}
-                  disabled={isLoading || isDeleting}
+                  disabled={deleteTransactionMutation.isPending}
                 >
                   <ButtonText color="white" fontWeight="600">
-                    {isDeleting ? "Excluindo..." : "Excluir"}
+                    {deleteTransactionMutation.isPending ? "Excluindo..." : "Excluir"}
                   </ButtonText>
                 </Button>
               </XStack>

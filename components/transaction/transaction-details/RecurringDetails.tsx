@@ -1,30 +1,13 @@
 import { Colors } from "@/constants/Colors";
-import { Transaction } from "@/types/transaction";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Text, View, XStack, YStack } from "tamagui";
 import { BaseTransactionDetails } from "./BaseTransactionDetails";
+import { useTransactionDetails } from "./TransactionDetailsProvider";
 
-interface RecurringDetailsProps {
-  transaction: Transaction;
-  onUpdate: (data: any) => void;
-  onDelete: () => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  isUpdating?: boolean;
-  isDeleting?: boolean;
-}
-
-export const RecurringDetails = ({
-  transaction,
-  onUpdate,
-  onDelete,
-  onCancel,
-  isLoading,
-  isUpdating,
-  isDeleting,
-}: RecurringDetailsProps) => {
+export const RecurringDetails = () => {
+  const { transaction, onUpdate } = useTransactionDetails();
   const colors = Colors.light;
 
   const formatDate = (date: Date) => {
@@ -58,15 +41,7 @@ export const RecurringDetails = ({
   };
 
   return (
-    <BaseTransactionDetails
-      transaction={transaction}
-      onUpdate={onUpdate}
-      onDelete={onDelete}
-      onCancel={onCancel}
-      isLoading={isLoading}
-      isUpdating={isUpdating}
-      isDeleting={isDeleting}
-    >
+    <BaseTransactionDetails>
       {/* Informações de Recorrência */}
       <YStack space={12} marginTop={16}>
         <Text fontSize={16} fontWeight="600" color={colors.text}>
@@ -269,7 +244,7 @@ export const RecurringDetails = ({
                 // Pausa a recorrência
                 onUpdate({
                   ...transaction,
-                  status: "CANCELLED",
+                  status: "PAUSED",
                 });
               }}
             >

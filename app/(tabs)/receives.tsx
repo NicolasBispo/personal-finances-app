@@ -189,7 +189,6 @@ export default function ReceivesTab() {
             isVisible={isDetailsVisible}
             onClose={handleCloseDetails}
             transaction={selectedTransaction}
-            queryKey={["receives", "transactions", dateRange.startDate.toISOString().split('T')[0], dateRange.endDate.toISOString().split('T')[0]]}
           />
         )}
       </TabsLayout>

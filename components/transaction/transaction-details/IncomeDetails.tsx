@@ -1,40 +1,15 @@
 import { Colors } from "@/constants/Colors";
-import { Transaction } from "@/types/transaction";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text, View, XStack, YStack } from "tamagui";
 import { BaseTransactionDetails } from "./BaseTransactionDetails";
+import { useTransactionDetails } from "./TransactionDetailsProvider";
 
-interface IncomeDetailsProps {
-  transaction: Transaction;
-  onUpdate: (data: any) => void;
-  onDelete: () => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  isUpdating?: boolean;
-  isDeleting?: boolean;
-}
-
-export const IncomeDetails = ({
-  transaction,
-  onUpdate,
-  onDelete,
-  onCancel,
-  isLoading,
-  isUpdating,
-  isDeleting,
-}: IncomeDetailsProps) => {
+export const IncomeDetails = () => {
+  const { transaction, onUpdate } = useTransactionDetails();
   const colors = Colors.light;
 
   return (
-    <BaseTransactionDetails
-      transaction={transaction}
-      onUpdate={onUpdate}
-      onDelete={onDelete}
-      onCancel={onCancel}
-      isLoading={isLoading}
-      isUpdating={isUpdating}
-      isDeleting={isDeleting}
-    >
+    <BaseTransactionDetails>
       {/* Informações Específicas de Receita */}
       <YStack space={12} marginTop={16}>
         <Text fontSize={16} fontWeight="600" color={colors.text}>
