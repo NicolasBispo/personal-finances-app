@@ -15,6 +15,7 @@ export const TransactionService = {
 
     console.log("getAllTransactions: searchParams", searchParams, "type", type);
     const response = await apiClient.get<Transaction[]>('/transactions', { params: { ...searchParams, type } });
+    console.log('response getAllTransactions', response.data);
     return response.data
   },
 
@@ -33,6 +34,32 @@ export const TransactionService = {
     if (endDate) params.append('endDate', endDate);
     
     const response = await apiClient.get<Transaction[]>(`/transactions?${params.toString()}`);
+    return response.data
+  },
+
+  getTransactionById: async (id: string) => {
+    console.log("getTransactionById: id", id);
+    const response = await apiClient.get<Transaction>(`/transactions/${id}`);
+    return response.data
+  },
+
+  getTransactionWithInstallments: async (id: string) => {
+    console.log("getTransactionWithInstallments: id", id);
+    const response = await apiClient.get<Transaction>(`/transactions/${id}`, {
+      params: { withInstallments: true }
+    });
+    return response.data
+  },
+
+  getInstallmentById: async (id: string) => {
+    console.log("getInstallmentById: id", id);
+    const response = await apiClient.get<Transaction>(`/installments/${id}`);
+    return response.data
+  },
+
+  getInstallmentInstallments: async (id: string) => {
+    console.log("getInstallmentInstallments: id", id);
+    const response = await apiClient.get<Transaction[]>(`/installments/${id}/installments`);
     return response.data
   },
 

@@ -1,13 +1,14 @@
 import { InstallmentTransactionHeader } from "@/components/layouts/InstallmentTransactionHeader";
 import { Colors } from "@/constants/Colors";
-import { useTransactionQueries } from "@/hooks/useTransactionQueries";
-import { Transaction, TransactionType } from "@/types/transaction";
+import { TransactionService } from "@/services/transactionService";
+import { Transaction } from "@/types/transaction";
 import { formatCurrencyFromCents } from "@/utils/finances";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { Alert, ScrollView, TouchableOpacity, useColorScheme } from "react-native";
 import { Button, ButtonText, Text, View, XStack, YStack } from "tamagui";
 
@@ -16,27 +17,25 @@ export default function InstallmentDetailsScreen() {
   const colorScheme = useColorScheme();
   const colors = colorScheme === "light" ? Colors.light : Colors.dark;
 
-  // Buscar a transação específica
-  const { expensesQuery, receivesQuery } = useTransactionQueries();
-  
-  const transaction = useMemo(() => {
-    const expenses = expensesQuery.data || [];
-    const receives = receivesQuery.data || [];
-    
-    const allTransactionsData = [...expenses, ...receives];
-    
-    return allTransactionsData.find(
-      (transaction) => transaction.id === id && transaction.type === TransactionType.INSTALLMENT
-    );
-  }, [expensesQuery.data, receivesQuery.data, id]);
+  // Query para buscar a transação específica
+  const transactionQuery = useQuery({
+    queryKey: ["transaction", id],
+    queryFn: () => TransactionService.getTransactionById(id!),
+    enabled: !!id,
+  });
+
+  console.log('query data na pagina de detalhes da parcela', transactionQuery.data);
+  console.log('query error na pagina de detalhes da parcela', transactionQuery.error);
 
   // Estados de loading e erro
-  const isLoading = expensesQuery.isLoading || receivesQuery.isLoading;
-  const error = expensesQuery.error || receivesQuery.error;
+  const isLoading = transactionQuery.isLoading;
+  const error = transactionQuery.error;
   const refetch = () => {
-    expensesQuery.refetch();
-    receivesQuery.refetch();
+    transactionQuery.refetch();
   };
+
+  // Dados da query
+  const transaction = transactionQuery.data;
 
   const formatDate = (date: Date) => {
     return format(new Date(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });

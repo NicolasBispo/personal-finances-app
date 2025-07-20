@@ -1,14 +1,20 @@
 import { InstallmentTransactionHeader } from "@/components/layouts/InstallmentTransactionHeader";
 import { Colors } from "@/constants/Colors";
-import { useTransactionQueries } from "@/hooks/useTransactionQueries";
-import { Transaction, TransactionType } from "@/types/transaction";
+import { TransactionService } from "@/services/transactionService";
+import { Transaction } from "@/types/transaction";
 import { formatCurrencyFromCents } from "@/utils/finances";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useMemo } from "react";
-import { FlatList, RefreshControl, TouchableOpacity, useColorScheme } from "react-native";
+import { useCallback } from "react";
+import {
+  FlatList,
+  RefreshControl,
+  TouchableOpacity,
+  useColorScheme,
+} from "react-native";
 import { Text, View, XStack, YStack } from "tamagui";
 
 export default function TransactionInstallmentsScreen() {
@@ -17,48 +23,34 @@ export default function TransactionInstallmentsScreen() {
   const colorScheme = useColorScheme();
   const colors = colorScheme === "light" ? Colors.light : Colors.dark;
 
-  // Buscar todas as transações
-  const { expensesQuery, receivesQuery } = useTransactionQueries();
-  
-  // Encontrar a transação pai e suas parcelas
-  const { parentTransaction, installmentTransactions } = useMemo(() => {
-    const expenses = expensesQuery.data || [];
-    const receives = receivesQuery.data || [];
-    
-    const allTransactionsData = [...expenses, ...receives];
-    
-    // Encontrar a transação pai
-    const parent = allTransactionsData.find(
-      (transaction) => transaction.id === transactionId
-    );
-    
-    // Filtrar todas as parcelas relacionadas a esta transação
-    const installments = allTransactionsData.filter(
-      (transaction) => 
-        transaction.type === TransactionType.INSTALLMENT && 
-        (transaction.parentTransactionId === transactionId || transaction.id === transactionId)
-    );
-    
-    // Ordenar as parcelas por número
-    const sortedInstallments = installments.sort((a, b) => {
-      const aNumber = a.installmentNumber || 0;
-      const bNumber = b.installmentNumber || 0;
-      return aNumber - bNumber;
-    });
-    
-    return {
-      parentTransaction: parent,
-      installmentTransactions: sortedInstallments
-    };
-  }, [expensesQuery.data, receivesQuery.data, transactionId]);
+  // Query para buscar a transação parcelada principal
+  const installmentQuery = useQuery({
+    queryKey: ["installment", transactionId],
+    queryFn: () => TransactionService.getInstallmentById(transactionId!),
+    enabled: !!transactionId,
+  });
+
+  // Query para buscar as parcelas da transação parcelada
+  const installmentsQuery = useQuery({
+    queryKey: ["installment-installments", transactionId],
+    queryFn: () =>
+      TransactionService.getInstallmentInstallments(transactionId!),
+    enabled: !!transactionId,
+  });
 
   // Estados de loading e erro
-  const isLoading = expensesQuery.isLoading || receivesQuery.isLoading;
-  const error = expensesQuery.error || receivesQuery.error;
+  const isLoading = installmentQuery.isLoading || installmentsQuery.isLoading;
+  const error = installmentQuery.error || installmentsQuery.error;
   const refetch = () => {
-    expensesQuery.refetch();
-    receivesQuery.refetch();
+    installmentQuery.refetch();
+    installmentsQuery.refetch();
   };
+
+  console.log("isntallment quert data", installmentQuery.data);
+
+  // Dados das queries
+  const parentTransaction = installmentQuery.data;
+  const installmentTransactions = installmentsQuery.data || [];
 
   const formatDate = (date: Date) => {
     return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
@@ -95,21 +87,23 @@ export default function TransactionInstallmentsScreen() {
 
   const calculateProgress = (transaction: Transaction) => {
     if (transaction.installmentNumber && transaction.totalInstallments) {
-      return (transaction.installmentNumber / transaction.totalInstallments) * 100;
+      return (
+        (transaction.installmentNumber / transaction.totalInstallments) * 100
+      );
     }
     return 0;
   };
 
   const calculateTotalAmount = (transaction: Transaction) => {
-    if (transaction.totalInstallments && transaction.amountInCents) {
-      return transaction.totalInstallments * transaction.amountInCents;
-    }
     return transaction.amountInCents;
   };
 
-  const handleInstallmentPress = useCallback((transaction: Transaction) => {
-    router.push(`/installments/${transaction.id}`);
-  }, [router]);
+  const handleInstallmentPress = useCallback(
+    (transaction: Transaction) => {
+      router.push(`/installments/${transaction.id}`);
+    },
+    [router]
+  );
 
   const renderInstallmentItem = ({ item }: { item: Transaction }) => (
     <TouchableOpacity onPress={() => handleInstallmentPress(item)}>
@@ -138,7 +132,11 @@ export default function TransactionInstallmentsScreen() {
               paddingVertical={4}
               borderRadius={6}
             >
-              <Text fontSize={12} fontWeight="600" color={getStatusColor(item.status)}>
+              <Text
+                fontSize={12}
+                fontWeight="600"
+                color={getStatusColor(item.status)}
+              >
                 {getStatusText(item.status)}
               </Text>
             </View>
@@ -165,14 +163,14 @@ export default function TransactionInstallmentsScreen() {
                   {Math.round(calculateProgress(item))}%
                 </Text>
               </XStack>
-              
-              <View 
-                backgroundColor="#E0E0E0" 
-                height={6} 
+
+              <View
+                backgroundColor="#E0E0E0"
+                height={6}
                 borderRadius={3}
                 overflow="hidden"
               >
-                <View 
+                <View
                   backgroundColor={colors.tint}
                   height="100%"
                   width={`${calculateProgress(item)}%`}
@@ -199,7 +197,11 @@ export default function TransactionInstallmentsScreen() {
                     {formatDate(item.dueDate)}
                   </Text>
                 </YStack>
-                <MaterialIcons name="chevron-right" size={20} color={colors.icon} />
+                <MaterialIcons
+                  name="chevron-right"
+                  size={20}
+                  color={colors.icon}
+                />
               </XStack>
             </View>
           )}
@@ -218,7 +220,13 @@ export default function TransactionInstallmentsScreen() {
       >
         <MaterialIcons name="credit-card" size={48} color={colors.tint} />
       </View>
-      <Text fontSize={18} fontWeight="600" color={colors.text} textAlign="center" marginBottom={8}>
+      <Text
+        fontSize={18}
+        fontWeight="600"
+        color={colors.text}
+        textAlign="center"
+        marginBottom={8}
+      >
         Nenhuma parcela encontrada
       </Text>
       <Text fontSize={14} color={colors.icon} textAlign="center">
@@ -229,7 +237,8 @@ export default function TransactionInstallmentsScreen() {
 
   const totalInstallments = installmentTransactions.length;
   const paidInstallments = installmentTransactions.filter(
-    transaction => transaction.status === "PAID" || transaction.status === "RECEIVED"
+    (transaction) =>
+      transaction.status === "PAID" || transaction.status === "RECEIVED"
   ).length;
 
   if (isLoading) {
@@ -261,7 +270,7 @@ export default function TransactionInstallmentsScreen() {
   return (
     <View flex={1} backgroundColor="#F8F9FA">
       <InstallmentTransactionHeader title="Parcelas" showBackButton />
-      
+
       {/* Informações da transação pai */}
       <View
         backgroundColor="white"
@@ -273,13 +282,13 @@ export default function TransactionInstallmentsScreen() {
           <Text fontSize={18} fontWeight="600" color={colors.text}>
             {parentTransaction.description}
           </Text>
-          
+
           <XStack justifyContent="space-between" alignItems="center">
             <Text fontSize={16} color={colors.icon}>
               Valor Total
             </Text>
             <Text fontSize={18} fontWeight="600" color={colors.text}>
-              {formatCurrencyFromCents(calculateTotalAmount(parentTransaction))}
+              {formatCurrencyFromCents(parentTransaction.amountInCents)}
             </Text>
           </XStack>
         </YStack>
@@ -301,13 +310,15 @@ export default function TransactionInstallmentsScreen() {
               {paidInstallments} de {totalInstallments}
             </Text>
           </XStack>
-          
+
           <XStack justifyContent="space-between" alignItems="center">
             <Text fontSize={14} color={colors.icon}>
               Valor Pago
             </Text>
             <Text fontSize={16} fontWeight="600" color={colors.text}>
-              {formatCurrencyFromCents(paidInstallments * (parentTransaction.amountInCents || 0))}
+              {formatCurrencyFromCents(
+                paidInstallments * (parentTransaction.amountInCents || 0)
+              )}
             </Text>
           </XStack>
         </YStack>
@@ -337,4 +348,4 @@ export default function TransactionInstallmentsScreen() {
       </View>
     </View>
   );
-} 
+}

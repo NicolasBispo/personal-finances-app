@@ -12,23 +12,30 @@ export default function PlannerControls() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(new Date());
 
-  // Inicializar planner apenas uma vez na montagem
+  // Inicializar planner imediatamente se não existir
   useEffect(() => {
     if (!planner) {
       const now = new Date();
-      setPlanner({
+      const initialPlanner = {
         id: 1,
         month_name: now.toLocaleDateString("pt-BR", { month: "long" }),
         month_number: now.getMonth() + 1,
         year: now.getFullYear(),
-      });
+      };
+      console.log('Inicializando planner:', initialPlanner);
+      setPlanner(initialPlanner);
     }
   }, [planner, setPlanner]);
 
   // Sincronizar selectedDate com planner
   useEffect(() => {
     if (planner) {
-      setSelectedDate(new Date(planner.year, planner.month_number - 1, 1));
+      const newSelectedDate = new Date(planner.year, planner.month_number - 1, 1);
+      setSelectedDate(newSelectedDate);
+      console.log('Sincronizando selectedDate com planner:', {
+        planner,
+        newSelectedDate: newSelectedDate.toISOString()
+      });
     }
   }, [planner]);
 
@@ -202,13 +209,14 @@ export default function PlannerControls() {
         <Modal
           transparent
           visible={showDatePicker}
-          animationType="slide"
+          animationType="fade"
           onRequestClose={handleCancelDate}
         >
           <View
             flex={1}
             backgroundColor="rgba(0, 0, 0, 0.5)"
             justifyContent="center"
+            onPress={() => setShowDatePicker(false)}
             alignItems="center"
           >
             <View

@@ -136,7 +136,7 @@ export default function ExpensesTab() {
         </View>
 
         {/* Lista de transações */}
-        <View flex={1} padding={16}>
+        <View flex={1} padding={16} paddingBottom={32}>
           {isLoading ? (
             <YStack flex={1} justifyContent="center" alignItems="center">
               <Text fontSize={16} color={colors.icon}>

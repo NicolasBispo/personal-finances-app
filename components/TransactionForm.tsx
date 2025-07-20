@@ -25,6 +25,7 @@ const transactionSchema = z.object({
     const num = parseInt(val);
     return !isNaN(num) && num > 0 && num <= 60; // Máximo 60 parcelas
   }, "Quantidade de parcelas deve ser entre 1 e 60"),
+  recurrencePattern: z.enum(["MONTHLY", "WEEKLY", "YEARLY"]).optional(),
 }).refine((data) => {
   // Se for INSTALLMENT, totalInstallments é obrigatório
   if (data.expenseType === "INSTALLMENT") {
@@ -34,6 +35,15 @@ const transactionSchema = z.object({
 }, {
   message: "Para compras parceladas, é necessário informar pelo menos 2 parcelas",
   path: ["totalInstallments"]
+}).refine((data) => {
+  // Se for RECURRING, recurrencePattern é obrigatório
+  if (data.expenseType === "RECURRING") {
+    return data.recurrencePattern;
+  }
+  return true;
+}, {
+  message: "Para despesas recorrentes, é necessário selecionar o padrão de recorrência",
+  path: ["recurrencePattern"]
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -46,6 +56,7 @@ interface TransactionFormProps {
     dueDate?: Date;
     type: "INCOME" | "EXPENSE" | "INSTALLMENT" | "RECURRING"; // Tipo correto para a API
     totalInstallments?: number; // Quantidade total de parcelas (apenas para INSTALLMENT)
+    recurrencePattern?: "MONTHLY" | "WEEKLY" | "YEARLY"; // Padrão de recorrência (apenas para RECURRING)
   }) => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -60,6 +71,7 @@ export default function TransactionForm({
 }: TransactionFormProps) {
   const [selectedType, setSelectedType] = useState<"INCOME" | "EXPENSE">(type);
   const [selectedExpenseType, setSelectedExpenseType] = useState<"EXPENSE" | "INSTALLMENT" | "RECURRING">("EXPENSE");
+  const [selectedRecurrencePattern, setSelectedRecurrencePattern] = useState<"MONTHLY" | "WEEKLY" | "YEARLY">("MONTHLY");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDueDatePicker, setShowDueDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(new Date());
@@ -83,6 +95,7 @@ export default function TransactionForm({
       type: type,
       expenseType: "EXPENSE",
       totalInstallments: "",
+      recurrencePattern: "MONTHLY",
     },
   });
 
@@ -121,6 +134,7 @@ export default function TransactionForm({
       type: apiType,
       amountInCents: amountInCents,
       totalInstallments: data.totalInstallments ? parseInt(data.totalInstallments) : undefined,
+      recurrencePattern: selectedExpenseType === "RECURRING" ? selectedRecurrencePattern : undefined,
     };
     console.log("handleFormSubmit: formattedData", formattedData);
     onSubmit(formattedData);
@@ -462,6 +476,90 @@ export default function TransactionForm({
                 {errors.totalInstallments && (
                   <Text color="#E74C3C" fontSize={12}>
                     {errors.totalInstallments.message}
+                  </Text>
+                )}
+              </YStack>
+            )}
+
+            {/* Padrão de Recorrência (apenas para despesas recorrentes) */}
+            {selectedType === "EXPENSE" && selectedExpenseType === "RECURRING" && (
+              <YStack space={6}>
+                <Label fontSize={14} fontWeight="600" color={colors.text}>
+                  Padrão de Recorrência
+                </Label>
+                <XStack space={6}>
+                  <Button
+                    flex={1}
+                    backgroundColor={selectedRecurrencePattern === "WEEKLY" ? "#E74C3C" : "#F5F5F5"}
+                    borderWidth={1}
+                    borderColor={selectedRecurrencePattern === "WEEKLY" ? "#E74C3C" : "#E0E0E0"}
+                    onPress={() => {
+                      setSelectedRecurrencePattern("WEEKLY");
+                      setValue("recurrencePattern", "WEEKLY");
+                    }}
+                    pressStyle={{
+                      backgroundColor: selectedRecurrencePattern === "WEEKLY" ? "#E74C3C" : "#E8E8E8",
+                    }}
+                    paddingVertical={6}
+                  >
+                    <Text 
+                      color={selectedRecurrencePattern === "WEEKLY" ? "white" : colors.text}
+                      fontWeight="600"
+                      fontSize={12}
+                    >
+                      Semanal
+                    </Text>
+                  </Button>
+                  
+                  <Button
+                    flex={1}
+                    backgroundColor={selectedRecurrencePattern === "MONTHLY" ? "#E74C3C" : "#F5F5F5"}
+                    borderWidth={1}
+                    borderColor={selectedRecurrencePattern === "MONTHLY" ? "#E74C3C" : "#E0E0E0"}
+                    onPress={() => {
+                      setSelectedRecurrencePattern("MONTHLY");
+                      setValue("recurrencePattern", "MONTHLY");
+                    }}
+                    pressStyle={{
+                      backgroundColor: selectedRecurrencePattern === "MONTHLY" ? "#E74C3C" : "#E8E8E8",
+                    }}
+                    paddingVertical={6}
+                  >
+                    <Text 
+                      color={selectedRecurrencePattern === "MONTHLY" ? "white" : colors.text}
+                      fontWeight="600"
+                      fontSize={12}
+                    >
+                      Mensal
+                    </Text>
+                  </Button>
+                  
+                  <Button
+                    flex={1}
+                    backgroundColor={selectedRecurrencePattern === "YEARLY" ? "#E74C3C" : "#F5F5F5"}
+                    borderWidth={1}
+                    borderColor={selectedRecurrencePattern === "YEARLY" ? "#E74C3C" : "#E0E0E0"}
+                    onPress={() => {
+                      setSelectedRecurrencePattern("YEARLY");
+                      setValue("recurrencePattern", "YEARLY");
+                    }}
+                    pressStyle={{
+                      backgroundColor: selectedRecurrencePattern === "YEARLY" ? "#E74C3C" : "#E8E8E8",
+                    }}
+                    paddingVertical={6}
+                  >
+                    <Text 
+                      color={selectedRecurrencePattern === "YEARLY" ? "white" : colors.text}
+                      fontWeight="600"
+                      fontSize={12}
+                    >
+                      Anual
+                    </Text>
+                  </Button>
+                </XStack>
+                {errors.recurrencePattern && (
+                  <Text color="#E74C3C" fontSize={12}>
+                    {errors.recurrencePattern.message}
                   </Text>
                 )}
               </YStack>
